@@ -7,4 +7,5 @@ pandas
 scipy
 r-base
 r-dplyr
+r-tidyr
 bioconductor-genomicranges

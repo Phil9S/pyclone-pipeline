@@ -1,17 +1,36 @@
 # pyclone pipeline
-## libs
-library(GenomicRanges)
-library(dplyr)
+
+## Params
+seed=123123
+restarts=10
+chrprefix="Y"
 
 ## Get args
 args <- commandArgs(trailingOnly=TRUE)
 file_list <- args[1]
+
 ## Set outdir if needed
 if(!is.na(args[2])){
   out_dir <- args[2]
 } else {
   out_dir <- ""
 }
+
+## arg check
+if(!file.exists(args[1])){
+	stop("input file not found")
+}
+
+if(out_dir != ""){
+	if(!dir.exists(out_dir)){
+		stop("output dir not found")
+	}
+}	
+
+## libs
+suppressPackageStartupMessages(library(GenomicRanges))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
 
 ## Functions
 files <- read.table(file_list,header=T,sep="\t")
@@ -89,9 +108,9 @@ findCNoverlaps <- function(snv_grange,cn_grange){
   mcols(snv_grange_filt)$minor_cn <- mcols(cn_grange[subjectHits(overlaps)])$nMinor
   
   snv_grange_filt.df <- as.data.frame(snv_grange_filt) %>%
-    mutate(normal_cn = ifelse(seqnames != "Y",2,1)) %>%
+    mutate(normal_cn = ifelse(seqnames != chrprefix,2,1)) %>%
     mutate(mutation_id = paste(seqnames,start,Ref,Alt,sep="_")) %>%
-    rename("ref_counts" = "Depth_normal","alt_counts" = "Depth_tumour","sample_id" = "Tumour") %>%
+    dplyr::rename("ref_counts" = "Depth_normal","alt_counts" = "Depth_tumour","sample_id" = "Tumour") %>%
     select(c("mutation_id","sample_id","ref_counts","alt_counts","major_cn","minor_cn","normal_cn")) %>%
     mutate(tumour_content = getPurityVal(.))
   
@@ -128,22 +147,28 @@ callPyclone <- function(x){
     sample_name <- y
     pyclone_fit <- paste0("pyclone-vi fit -i ",
                         paste0(out_dir,sample_name,"_pyclone_input.tsv")," -o ",
-                        paste0(out_dir,sample_name,"_pyclone_fit.h5d")," --seed 123123 -r 10")
+                        paste0(out_dir,sample_name,"_pyclone_fit.h5d")," --seed ",seed," -r ",restarts)
     system(pyclone_fit)
     pyclone_write <- paste0("pyclone-vi write-results-file -i ",
                           paste0(out_dir,sample_name,"_pyclone_fit.h5d")," -o ",
                           paste0(out_dir,sample_name,"_pyclone_results.tsv"))
     system(pyclone_write)
   })
+  return(cat("pyclone finished"))
 }
 
 formatOutput <- function(x){
   lapply(names(x),function(y){
     sample_name <- y
     pyclone_results <- read.table(paste0(out_dir,sample_name,"_pyclone_results.tsv"),header = T,sep = "\t")
+    pyclone_results <- pyclone_results %>%
+                        pivot_wider(id_cols = mutation_id,
+                                    names_from = sample_id,
+                                    values_from = -c(1,2))
+    snv_list_file <- pat_split[[y]]$snv_file[1]
     snv_list <- read.table(snv_list_file,header=T,sep=",",row.names=1)
     snv_list$mutation_id <- paste(snv_list$Chromosome,snv_list$Position,snv_list$Ref,snv_list$Alt,sep="_")
-    joined <- dplyr::left_join(snv_list,pyclone_results,by="mutation_id")
+    joined <- dplyr::left_join(pyclone_results,snv_list,by="mutation_id")
     write.table(x = joined,file = paste0(out_dir,sample_name,"_pyclone_results_final.tsv"),quote = F,append = F,sep = "\t",row.names = F,col.names = T)
   })
 }
@@ -153,6 +178,6 @@ cn <- read_cn_data(pat_split)
 snvs <- read_snv_data(pat_split)
 pyclone_input <- getCNoverlaps(snvs,cn)
 callPyclone(pyclone_input)
-#formatOutput(pyclone_input)
+formatOutput(pyclone_input)
 
 # END

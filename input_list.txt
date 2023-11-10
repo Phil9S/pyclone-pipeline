@@ -1,8 +1,3 @@
 patient_id	sample_id	cn_file	snv_file	purity
-MAP.06025_polyp	MAP.06025_polyp1	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
-MAP.06025_polyp	MAP.06025_polyp2	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
-MAP.06025_polyp1	MAP.06025_polyp3	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
-MAP.06025_polyp2	MAP.06025_polyp4	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
-MAP.06025_polyp2	MAP.06025_polyp5	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
-MAP.06025_polyp2	MAP.06025_polyp6	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
+MAP.06025_polyp	MAP.06025_polyp	tumour.segments.txt	snvs_map_06025_polyp.csv	0.64
 
