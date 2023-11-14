@@ -66,8 +66,10 @@ read_cn_data <- function(x){
 read_snv_data <- function(x){
   snv_tables <- lapply(x,function(y){
     if(nrow(y) == 1){
-      tabs <- read.csv(y$snv_file[1],header=T,sep=",") %>%
-            select(Chromosome,Position,Ref,Alt,Depth_tumour,Depth_normal,Tumour)
+      tabs <- read.csv(y$snv_file[1],header=T,sep=",",check.names = F) %>%
+            select(Chromosome,Position,Ref,Alt,`Depth (tumour)`,`Alt count (tumour)`,Tumour) %>%
+	    mutate(alt_counts = `Alt count (tumour)`) %>%
+	    mutate(ref_counts = `Depth (tumour)` - `Alt count (tumour)`)
       tabs$Tumour <- y$sample_id
       tabs <- list(makeGRangesFromDataFrame(tabs,keep.extra.columns=T,
                                                          start.field="position",
@@ -75,15 +77,19 @@ read_snv_data <- function(x){
     } else {
       for(i in 1:nrow(y)){
         if(i == 1){
-          tabs <- read.csv(y$snv_file[i],header=T,sep=",") %>%
-            select(Chromosome,Position,Ref,Alt,Depth_tumour,Depth_normal,Tumour)
+          tabs <- read.csv(y$snv_file[i],header=T,sep=",",check.names = F) %>%
+            select(Chromosome,Position,Ref,Alt,`Depth (tumour)`,`Alt count (tumour)`,Tumour) %>%
+            mutate(alt_counts = `Alt count (tumour)`) %>%
+            mutate(ref_counts = `Depth (tumour)` - `Alt count (tumour)`)
           tabs$Tumour <- y$sample_id[i]
           tabs <- list(makeGRangesFromDataFrame(tabs,keep.extra.columns=T,
                                                            start.field="position",
                                                            end.field="position"))
         } else {
-          tab_new <- read.csv(y$snv_file[i],header=T,sep=",") %>%
-            select(Chromosome,Position,Ref,Alt,Depth_tumour,Depth_normal,Tumour)
+          tab_new <- read.csv(y$snv_file[i],header=T,sep=",",check.names = F) %>%
+            select(Chromosome,Position,Ref,Alt,`Depth (tumour)`,`Alt count (tumour)`,Tumour) %>%
+            mutate(alt_counts = `Alt count (tumour)`) %>%
+            mutate(ref_counts = `Depth (tumour)` - `Alt count (tumour)`)
           tab_new$Tumour <- y$sample_id[i]
           tab_new <- makeGRangesFromDataFrame(tab_new,keep.extra.columns=T,
                                               start.field="position",
@@ -110,7 +116,7 @@ findCNoverlaps <- function(snv_grange,cn_grange){
   snv_grange_filt.df <- as.data.frame(snv_grange_filt) %>%
     mutate(normal_cn = ifelse(seqnames != chrprefix,2,1)) %>%
     mutate(mutation_id = paste(seqnames,start,Ref,Alt,sep="_")) %>%
-    dplyr::rename("ref_counts" = "Depth_normal","alt_counts" = "Depth_tumour","sample_id" = "Tumour") %>%
+    dplyr::rename("sample_id" = "Tumour") %>%
     select(c("mutation_id","sample_id","ref_counts","alt_counts","major_cn","minor_cn","normal_cn")) %>%
     mutate(tumour_content = getPurityVal(.))
   
@@ -166,7 +172,7 @@ formatOutput <- function(x){
                                     names_from = sample_id,
                                     values_from = -c(1,2))
     snv_list_file <- pat_split[[y]]$snv_file[1]
-    snv_list <- read.table(snv_list_file,header=T,sep=",",row.names=1)
+    snv_list <- read.csv(snv_list_file,header=T,sep=",",check.names = F)
     snv_list$mutation_id <- paste(snv_list$Chromosome,snv_list$Position,snv_list$Ref,snv_list$Alt,sep="_")
     joined <- dplyr::left_join(pyclone_results,snv_list,by="mutation_id")
     write.table(x = joined,file = paste0(out_dir,sample_name,"_pyclone_results_final.tsv"),quote = F,append = F,sep = "\t",row.names = F,col.names = T)
