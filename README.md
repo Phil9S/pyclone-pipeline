@@ -1,6 +1,6 @@
 # pyclone-pipeline
 
-pipeline to quickly deploy and compute clonal populations using pyclone
+pipeline to quickly deploy and compute clonal populations using [pyclone](https://github.com/Roth-Lab/pyclone-vi).
 
 ### Setup env
 ```
